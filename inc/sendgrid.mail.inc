@@ -325,6 +325,13 @@ class SendGridMailSystem implements MailSystemInterface {
         }
       }
     }
+    if (isset($message['params']['attachments']) && !empty($message['params']['attachments'])) {
+      foreach ($message['params']['attachments'] as $attachmentitem) {
+        if (is_file($attachmentitem)) {
+          $attachments[$attachmentitem] = $attachmentitem;
+        }
+      }
+    }
 
     // If we have attachments, add them.
     if (!empty($attachments)) {
