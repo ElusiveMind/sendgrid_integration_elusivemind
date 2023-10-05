@@ -210,3 +210,13 @@ function sendgrid_integration_mail($key, &$message, $params) {
     $message['headers']['Reply-To'] = $params['Reply-To'];
   }
 }
+
+/**
+ * Implements hook_autoload_info().
+ */
+function sendgrid_integration_autoload_info() {
+  $implements = array(
+    'SendGridMailSystem' => 'inc/sendgrid.mail.inc',
+  );
+  return $implements;
+}
