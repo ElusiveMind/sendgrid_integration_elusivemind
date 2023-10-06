@@ -4,6 +4,7 @@ backdrop = 1.x
 php = 5.5
 package = Mail
 configure = admin/config/services/sendgrid
+
 files[] = inc/sendgrid.mail.inc
 files[] = tests/sendgrid_integration.test
 files[] = tests/sendgrid_integration.mail_test.test

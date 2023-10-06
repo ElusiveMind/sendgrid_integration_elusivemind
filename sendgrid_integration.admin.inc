@@ -5,6 +5,7 @@
  */
 function sendgrid_integration_admin() {
   $form = [];
+  $config = config('sendgrid_integration.settings');
 
   $form['authentication'] = [
     '#type' => 'fieldset',
@@ -12,7 +13,8 @@ function sendgrid_integration_admin() {
   ];
 
   $requirenewkey = TRUE;
-  if (!empty(variable_get('sendgrid_integration_apikey', FALSE))) {
+  $apikey = $config->get('sendgrid_integration_apikey');
+  if (!empty($apikey)) {
     $form['authentication']['secretkeynotice'] = [
       '#markup' => t('You have saved a secret key. You may change the key by inputing a new one in the field directly below.'),
     ];
@@ -41,7 +43,7 @@ function sendgrid_integration_admin() {
   ];
 
   if (!module_exists('maillog')) {
-    $form['debugging']['maillog']['#description'] = t('Installing the <a href="@url">Maillog module</a> also allows keeping copies of all emails sent through the site.', ['@url' => 'https://www.drupal.org/project/maillog']);
+    $form['debugging']['maillog']['#description'] = t('Installing the <a href="@url">Maillog module</a> also allows keeping copies of all emails sent through the site.', ['@url' => 'https://backdropcms.org/project/maillog']);
   }
   else {
     $form['debugging']['maillog']['#description'] = t('The <a href="@url">Maillog module</a> is installed, it can also be used to keep copies of all emails sent through the site.', ['@url' => url('admin/config/development/maillog')]);
@@ -49,13 +51,13 @@ function sendgrid_integration_admin() {
     $form['debugging']['maillog']['sendgrid_integration_maillog_log'] = [
       '#type' => 'checkbox',
       '#title' => t('Create table entries in maillog table for each e-mail.'),
-      '#default_value' => variable_get('sendgrid_integration_maillog_log', TRUE),
+      '#default_value' => $config->get('sendgrid_integration_maillog_log'),
     ];
 
     $form['debugging']['maillog']['sendgrid_integration_maillog_devel'] = [
       '#type' => 'checkbox',
       '#title' => t("Display the e-mails on page using devel module (if enabled)."),
-      '#default_value' => variable_get('sendgrid_integration_maillog_devel', TRUE),
+      '#default_value' => $config->get('sendgrid_integration_maillog_devel'),
       '#disabled' => !module_exists('devel'),
     ];
   }
@@ -70,8 +72,11 @@ function sendgrid_integration_admin() {
  * @param $form_state
  */
 function sendgrid_integration_admin_validate($form, &$form_state) {
+  $config = config('sendgrid_integration.settings');
+  $apikey = $config->get('sendgrid_integration_apikey');
+
   // Check for API secret key. If missing throw error.
-  if (empty(variable_get('sendgrid_integration_apikey', '')) && empty($form_state['values']['sendgrid_integration_apikey'])) {
+  if (empty($apikey) && empty($form_state['values']['sendgrid_integration_apikey'])) {
     form_set_error('authentication][sendgrid_integration_apikey', t('You have not stored an API Secret Key.'));
   }
 }
@@ -88,35 +93,36 @@ function sendgrid_integration_admin_validate($form, &$form_state) {
  * @return bool
  */
 function sendgrid_integration_admin_submit($form, $form_state) {
+  $config = config('sendgrid_integration.settings');
   if (isset($form_state['values']['sendgrid_integration_maillog_log'])) {
-    variable_set('sendgrid_integration_maillog_log', check_plain($form_state['values']['sendgrid_integration_maillog_log']));
+    $config->set('sendgrid_integration_maillog_log', check_plain($form_state['values']['sendgrid_integration_maillog_log']));
   }
   if (isset($form_state['values']['sendgrid_integration_maillog_devel'])) {
-    variable_set('sendgrid_integration_maillog_devel', check_plain($form_state['values']['sendgrid_integration_maillog_devel']));
+    $config->set('sendgrid_integration_maillog_devel', check_plain($form_state['values']['sendgrid_integration_maillog_devel']));
   }
-  $existingkey = variable_get('sendgrid_integration_apikey', '');
+  $existingkey = $config->get('sendgrid_integration_apikey');
   if (empty($form_state['values']['sendgrid_integration_apikey']) && !empty($existingkey)) {
     return TRUE;
   }
   if (isset($form_state['values']['sendgrid_integration_apikey']) && !empty($form_state['values']['sendgrid_integration_apikey'])) {
-    variable_set('sendgrid_integration_apikey', check_plain($form_state['values']['sendgrid_integration_apikey']));
-    drupal_set_message(t('SendGrid Settings Saved'), 'status', FALSE);
+    $config->set('sendgrid_integration_apikey', check_plain($form_state['values']['sendgrid_integration_apikey']));
+    $config->save();
+    backdrop_set_message(t('SendGrid Settings Saved'), 'status', FALSE);
     return TRUE;
   }
-
 }
-
 
 /**
  * Provides a form to send a test email through Sendgrid.
  */
 function sendgrid_integration_test() {
   $form = [];
+  $config = config('sendgrid_integration.settings');
 
-  $defaults = variable_get(
-    'sendgrid_integration_test_defaults',
-    [
-      'to' => variable_get('site_mail', 'user@example.com'),
+  $defaults = $config->get('sendgrid_integration_test_defaults');
+  if (empty($defaults)) {
+    $defaults = array(
+      'to' => $config->get('site_mail', 'user@example.com'),
       'subject' => 'Test Email from SendGrid Module',
       'body' => [
         'value' => 'Test Message for SendGrid.',
@@ -124,8 +130,8 @@ function sendgrid_integration_test() {
       'fromname' => '',
       'toname' => '',
       'replyto' => '',
-    ]
-  );
+    );
+  };
 
   $defaults['body']['format'] = filter_fallback_format();
   $form['fromname'] = [
@@ -137,7 +143,7 @@ function sendgrid_integration_test() {
   $form['to'] = [
     '#type' => 'textfield',
     '#title' => t('To'),
-    '#default_value' => $defaults['to'],
+    '#default_value' => (!empty($defaults['to'])) ? $defaults['to'] : NULL,
     '#maxlength' => 128,
     '#required' => TRUE,
   ];
@@ -156,22 +162,22 @@ function sendgrid_integration_test() {
   $form['subject'] = [
     '#type' => 'textfield',
     '#title' => t('Subject'),
-    '#default_value' => $defaults['subject'],
+    '#default_value' => (isset($defaults['subject'])) ? $defaults['subject'] : '',
     '#maxlength' => 128,
     '#required' => TRUE,
   ];
   $form['include_attachment'] = [
     '#title' => t('Include attachment'),
     '#type' => 'checkbox',
-    '#description' => t('If checked, the Drupal icon will be included as an attachment with the test email.'),
+    '#description' => t('If checked, the Backdrop icon will be included as an attachment with the test email.'),
     '#default_value' => TRUE,
   ];
   $form['body'] = [
     '#type' => 'text_format',
     '#title' => t('Body'),
     '#rows' => 20,
-    '#default_value' => $defaults['body']['value'],
-    '#format' => $defaults['body']['format'],
+    '#default_value' => (isset($defaults['body']['value'])) ? $defaults['body']['value'] : '',
+    '#format' => (isset($defaults['body']['format'])) ? $defaults['body']['format'] : '',
     '#required' => TRUE,
   ];
   $form['submit'] = [
@@ -185,6 +191,8 @@ function sendgrid_integration_test() {
  * Implements hook_submit().
  */
 function sendgrid_integration_test_submit($form, &$form_state) {
+  $config = config('sendgrid_integration.settings');
+
   // Create defaults array.
   $defaults = [
     'to' => $form_state['values']['to'],
@@ -195,8 +203,9 @@ function sendgrid_integration_test_submit($form, &$form_state) {
     'replyto' => $form_state['values']['replyto'],
   ];
   // Set the defaults for reuse.
-  variable_set('sendgrid_integration_test_defaults', $defaults);
-
+  $config->set('sendgrid_integration_test_defaults', $defaults);
+  $config->save();
+  
   $params = [
     'subject' => $form_state['values']['subject'],
     'body' => check_markup(
@@ -224,14 +233,14 @@ function sendgrid_integration_test_submit($form, &$form_state) {
   }
   // Attempt to send the email and post a message if it was successful.
   if (!empty($form_state['values']['fromname'])) {
-    $senderfrom = $form_state['values']['fromname'] . ' <' . variable_get('site_mail') . '>';
+    $senderfrom = $form_state['values']['fromname'] . ' <' . $config->get('site_mail') . '>';
   }
   else {
-    $senderfrom = variable_get('site_mail');
+    $senderfrom = $config->get('site_mail');
   }
-  $result = drupal_mail('sendgrid_integration', 'test', $sendto, language_default(), $params, $senderfrom);
+  $result = backdrop_mail('sendgrid_integration', 'test', $sendto, language_default(), $params, $senderfrom);
   if (isset($result['result']) && $result['result'] == 'true') {
-    drupal_set_message(t('SendGrid test email sent from %from to %to.', [
+    backdrop_set_message(t('SendGrid test email sent from %from to %to.', [
       '%from' => $senderfrom,
       '%to' => $sendto,
     ]), 'status');
