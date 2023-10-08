@@ -1,3 +1,13 @@
+1.x-1.0
+-------
+* Ported to Backdrop
+* Corrected some typographical and spelling errors
+* Changed from system variables to Backdrop configuration management
+* Included vendor dependencies
+* Required mail_system as a dependency to reduce requirement to modify setting.php
+* Removed Half Finished Test Scripts
+
+
 7.x-1.2
 ================================================================================
 

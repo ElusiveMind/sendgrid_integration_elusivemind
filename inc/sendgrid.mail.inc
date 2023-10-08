@@ -29,8 +29,9 @@ class SendGridMailSystem implements MailSystemInterface {
    * @return bool
    */
   public function mail(array $message) {
-
-    $key_secret = variable_get('sendgrid_integration_apikey', '');
+    $sendgrid = config('sendgrid_integration.settings');
+    $system = config('system.core');
+    $key_secret = $sendgrid->get('sendgrid_integration_apikey');
     if (empty($key_secret)) {
       // Set a warning int he logs of there is no key.
       watchdog('SendGrid Integration', t('No API Secret key has been set'), [], WATCHDOG_ERROR);
@@ -47,7 +48,7 @@ class SendGridMailSystem implements MailSystemInterface {
     // Create a new SendGrid object.
     $sendgrid = new SendGrid\Client($key_secret, $options);
     $sendgrid_message = new SendGrid\Email();
-    $sitename = variable_get('site_name');
+    $sitename = $system->get('site_name');
     // Defining default unique args.
     $unique_args = [
       'id' => $message['id'],
@@ -86,7 +87,7 @@ class SendGridMailSystem implements MailSystemInterface {
       $data['fromname'] = $fromaddrarray[1];
     }
     else {
-      $data['from'] = variable_get('site_mail');
+      $data['from'] = $system->get('site_mail');
       $data['fromname'] = $sitename;
     }
 
@@ -278,7 +279,7 @@ class SendGridMailSystem implements MailSystemInterface {
 
             default:
               // Everything else is unknown so we log and send the message as text.
-              drupal_set_message(t('The %header of your message is not supported by SendGrid and will be sent as text/plain instead.', ['%header' => "Content-Type: $value"]), 'error');
+              backdrop_set_message(t('The %header of your message is not supported by SendGrid and will be sent as text/plain instead.', ['%header' => "Content-Type: $value"]), 'error');
               watchdog('sendgrid_integration', 'The %header of your message is not supported by PHPMailer and will be sent as text/plain instead.', ['%header' => "Content-Type: $value"], WATCHDOG_ERROR);
               // Force the email to be text.
               $sendgrid_message->setText(drupal_wrap_mail(drupal_html_to_text($message['body'])));
@@ -339,7 +340,7 @@ class SendGridMailSystem implements MailSystemInterface {
     }
     // Integration with the Maillog module to use for debugging.
     if (module_exists('maillog')) {
-      if (variable_get('sendgrid_integration_maillog_log', TRUE)) {
+      if ($sendgrid->get('sendgrid_integration_maillog_log')) {
         $record = new stdClass;
 
         $record->header_message_id = isset($message->MessageID) ? $message->MessageID : NULL;
@@ -446,7 +447,7 @@ class SendGridMailSystem implements MailSystemInterface {
       }
 
       // Display the e-mail using Devel module.
-      if (variable_get('sendgrid_integration_maillog_devel', TRUE) && function_exists('dpm')) {
+      if ($sendgrid->get('sendgrid_integration_maillog_devel') && function_exists('dpm')) {
         $bodydevel = '';
         // Check Content-Type of message body and get the appropriate content.
         if (!empty($sendgrid_message->getHtml())) {

@@ -192,27 +192,28 @@ function sendgrid_integration_test() {
  */
 function sendgrid_integration_test_submit($form, &$form_state) {
   $config = config('sendgrid_integration.settings');
+  $system = config('system.core');
 
   // Create defaults array.
-  $defaults = [
+  $defaults = array(
     'to' => $form_state['values']['to'],
     'subject' => $form_state['values']['subject'],
     'body' => $form_state['values']['body'],
     'toname' => $form_state['values']['toname'],
     'fromname' => $form_state['values']['fromname'],
     'replyto' => $form_state['values']['replyto'],
-  ];
+  );
   // Set the defaults for reuse.
   $config->set('sendgrid_integration_test_defaults', $defaults);
   $config->save();
   
-  $params = [
+  $params = array(
     'subject' => $form_state['values']['subject'],
     'body' => check_markup(
       $form_state['values']['body']['value'],
       $form_state['values']['body']['format']
     ),
-  ];
+  );
   if (!empty($form_state['values']['replyto'])) {
     $params['Reply-To'] = $form_state['values']['replyto'];
   }
@@ -233,16 +234,16 @@ function sendgrid_integration_test_submit($form, &$form_state) {
   }
   // Attempt to send the email and post a message if it was successful.
   if (!empty($form_state['values']['fromname'])) {
-    $senderfrom = $form_state['values']['fromname'] . ' <' . $config->get('site_mail') . '>';
+    $senderfrom = $form_state['values']['fromname'] . ' <' . $system->get('site_mail') . '>';
   }
   else {
-    $senderfrom = $config->get('site_mail');
+    $senderfrom = $system->get('site_mail');
   }
   $result = backdrop_mail('sendgrid_integration', 'test', $sendto, language_default(), $params, $senderfrom);
   if (isset($result['result']) && $result['result'] == 'true') {
-    backdrop_set_message(t('SendGrid test email sent from %from to %to.', [
+    backdrop_set_message(t('SendGrid test email sent from %from to %to.', array(
       '%from' => $senderfrom,
       '%to' => $sendto,
-    ]), 'status');
+    )), 'status');
   }
 }

@@ -20,7 +20,6 @@ function sendgrid_integration_config_info() {
   return $prefixes;
 }
 
-
 /**
  * Implements hook_xautoload().
  */
@@ -136,8 +135,7 @@ function sendgrid_integration_get_bounces($start_date, $end_date, $type = NULL, 
 
   if (isset($start_date) == FALSE || isset($end_date) == FALSE) {
     watchdog('sendgrid_integration', 'Error on calling get_bounches: Missing date parameter', [], WATCHDOG_NOTICE);
-
-    return [];
+    return array();
   }
 
   $data = [
@@ -186,7 +184,7 @@ function sendgrid_integration_parse_address($email) {
     return [$matches[2], $matches[1]];
   }
   else {
-    return [$email, ' '];
+    return array($email, ' ');
   }
 }
 
