@@ -7,7 +7,6 @@
 * Required mail_system as a dependency to reduce requirement to modify setting.php
 * Removed Half Finished Test Scripts
 
-
 7.x-1.2
 ================================================================================
 
